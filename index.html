@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Musical Staff Lyrics Creator</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            line-height: 1.6;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            background-image: url('./background.webp');
+            background-size: cover;
+            background-attachment: fixed;
+            color: #333;
+        }
+        .content-wrapper {
+            background-color: rgba(249, 249, 249, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        #staffContainer {
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="80" viewBox="0 0 100 80"><line x1="0" y1="20" x2="100" y2="20" stroke="%23000" stroke-width="1"/><line x1="0" y1="30" x2="100" y2="30" stroke="%23000" stroke-width="1"/><line x1="0" y1="40" x2="100" y2="40" stroke="%23000" stroke-width="1"/><line x1="0" y1="50" x2="100" y2="50" stroke="%23000" stroke-width="1"/><line x1="0" y1="60" x2="100" y2="60" stroke="%23000" stroke-width="1"/></svg>');
+            background-repeat: repeat-x;
+            background-size: 100px 80px;
+            padding: 20px 0;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        #staffContainer::before {
+            content: "\1D11E";
+            font-size: 60px;
+            position: absolute;
+            left: 5px;
+            top: -10px;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            margin-top: 10px;
+            font-weight: bold;
+            color: #444;
+        }
+        input[type="text"] {
+            width: calc(100% - 16px);
+            padding: 8px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #output {
+            display: none;
+            white-space: pre-wrap;
+            background-color: #fff;
+            padding: 15px;
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        #copyButton {
+            display: none;
+            margin-top: 10px;
+        }
+        #lyricsDisplay {
+            text-align: center;
+            font-size: 18px;
+            margin-top: 10px;
+            color: #333;
+            min-height: 27px;
+        }
+        #progressTracker {
+            text-align: center;
+            font-size: 16px;
+            margin-top: 20px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="content-wrapper">
+        <h1>Musical Staff Lyrics Creator</h1>
+        <div id="staffContainer"></div>
+        <div id="lyricsDisplay"></div>
+        <form id="lyricsForm">
+            <div id="inputContainer"></div>
+            <button type="submit">Next</button>
+        </form>
+        <div id="progressTracker"></div>
+        <div id="output"></div>
+        <button id="copyButton">Copy Lyrics</button>
+    </div>
+
+    <script>
+        const structure = [
+            { section: "Verse 1", lines: 4 },
+            { section: "Chorus", lines: 4 },
+            { section: "Verse 2", lines: 4 },
+            { section: "Bridge", lines: 4 },
+            { section: "Outro", lines: 4 },
+            { section: "Song Style Keywords", lines: 4 }
+        ];
+
+        let currentSection = 0;
+        let currentLine = 0;
+        let lyrics = {};
+        let chorus = "";
+        let totalLines = structure.reduce((sum, section) => sum + section.lines, 0);
+        let completedLines = 0;
+
+        const form = document.getElementById('lyricsForm');
+        const inputContainer = document.getElementById('inputContainer');
+        const output = document.getElementById('output');
+        const copyButton = document.getElementById('copyButton');
+        const lyricsDisplay = document.getElementById('lyricsDisplay');
+        const progressTracker = document.getElementById('progressTracker');
+
+        function updateForm() {
+            inputContainer.innerHTML = '';
+            if (currentSection >= structure.length) {
+                form.style.display = 'none';
+                progressTracker.style.display = 'none';
+                displayFullLyrics();
+                return;
+            }
+
+            const section = structure[currentSection];
+            const label = document.createElement('label');
+            label.textContent = `${section.section} - Line ${currentLine + 1}:`;
+            inputContainer.appendChild(label);
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.required = true;
+            inputContainer.appendChild(input);
+
+            input.focus();
+            updateProgressTracker();
+        }
+
+        function updateProgressTracker() {
+            progressTracker.textContent = `Progress: ${completedLines} / ${totalLines} lines completed`;
+        }
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const input = inputContainer.querySelector('input');
+            const section = structure[currentSection];
+
+            if (!lyrics[section.section]) {
+                lyrics[section.section] = [];
+            }
+            lyrics[section.section].push(input.value);
+
+            if (section.section === "Chorus" && currentLine === section.lines - 1) {
+                chorus = lyrics[section.section].join('\n');
+            }
+
+            updateLyricsDisplay();
+            completedLines++;
+
+            currentLine++;
+            if (currentLine >= section.lines) {
+                currentSection++;
+                currentLine = 0;
+            }
+
+            updateForm();
+        });
+
+        function updateLyricsDisplay() {
+            const section = structure[currentSection];
+            if (section.section === "Song Style Keywords") {
+                lyricsDisplay.textContent = lyrics[section.section].join(', ');
+            } else {
+                lyricsDisplay.textContent = lyrics[section.section][currentLine];
+            }
+        }
+
+        function displayFullLyrics() {
+            let fullLyrics = "";
+            structure.forEach((section, index) => {
+                fullLyrics += `[${section.section}]\n`;
+                if (section.section === "Chorus") {
+                    fullLyrics += chorus + '\n\n';
+                } else if (section.section === "Verse 2" || section.section === "Bridge") {
+                    fullLyrics += lyrics[section.section].join('\n') + '\n\n';
+                    fullLyrics += `[Chorus]\n${chorus}\n\n`;
+                } else if (section.section === "Song Style Keywords") {
+                    fullLyrics += lyrics[section.section].join(', ') + '\n\n';
+                } else {
+                    fullLyrics += lyrics[section.section].join('\n') + '\n\n';
+                }
+            });
+            output.textContent = fullLyrics.trim();
+            output.style.display = 'block';
+            copyButton.style.display = 'block';
+        }
+
+        copyButton.addEventListener('click', function() {
+            navigator.clipboard.writeText(output.textContent).then(function() {
+                alert('Lyrics copied to clipboard!');
+            }, function(err) {
+                console.error('Could not copy text: ', err);
+            });
+        });
+
+        updateForm();
+    </script>
+</body>
+</html>
